@@ -2,12 +2,80 @@
 
 # convert all PBS HTML files to Markdown
 # so we can get the entire set of shownotes together on GitHub
+#
+# This script generates:
+# - a Markdown file for each HTML file in $SOURCEDIR
+# - a TAP result file so it is obvious which files are converted and whether this was successfull
+# - and index file that can be added to index.md
 
+SOURCEDIR=../sourcefiles
 OUTPUTDIR=../convert2
+TAPFILE='pbsconvert.tap'
+INDEXFILE='pbsconvert.index'
+counter=0
 
-for f in ../sourcefiles/*.html
+# -------------------
+# tapResult
+#
+# show ok or not ok based on parameter
+# -------------------
+
+function tapResult () {
+    local RESULT=$1
+    local TAPNR=$2
+    local MSG=$3
+
+    if [ "$RESULT" == "0" ]; then
+        echo "ok $TAPNR - $MSG"
+    else
+        echo "not ok $TAPNR - $MSG"
+    fi
+}
+
+# -------------------
+# processAndTest
+#
+# process a file and write a tap result for the conversion
+# -------------------
+
+function processAndTest() {
+    local INFILE="$1"
+    local OUTFILE="$2"
+
+    node index.js "${INFILE}" --output ${OUTPUTDIR}/${OUTFILE}
+
+    local RESULT=`echo $?`
+    counter=$[counter+1]
+    tapResult $RESULT $counter "${OUTFILE}" >> "${TAPFILE}"
+}
+
+# -------------------
+# generateIndex
+#
+# process the filename to an index that can be added to index.md
+# -------------------
+function generateIndex() {
+    local INFILE="$1"
+    local OUTFILE="$2"
+
+    local NAME=$(echo "${INFILE}" | cut -d'/' -f 3 | cut -d':' -f 1)
+
+    echo "[${NAME}](${OUTFILE})" >> "${INDEXFILE}"
+}
+
+
+# start the tapfile with the plan
+tapplan=$(ls -l ${SOURCEDIR}/*.html | wc -l)
+echo 0..${tapplan} > ${TAPFILE}
+
+# start with an empty indexfile
+
+echo -n > $INDEXFILE
+
+for f in ${SOURCEDIR}/*.html
 do
     PBSNO=$(echo $f | cut -d' ' -f 2)
     PBSMD=pbs${PBSNO}.md
-    node index.js "${f}" --output ${OUTPUTDIR}/${PBSMD}
+    processAndTest "${f}" ${PBSMD}
+    generateIndex  "${f}" ${PBSMD}
 done
