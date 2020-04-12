@@ -8,7 +8,7 @@ const gfm = turndownPluginGfm.gfm;
 
 const program = require('commander');
 
-const files = require('./lib/files');
+const downloadImages = require('./lib/files');
 const prepareBody = require('./lib/preparebody');
 const customRules = require('./lib/customrules');
 
@@ -73,6 +73,9 @@ function turndown(string) {
     fs.readFile(string, 'utf8', function (error, contents) {
       if (error) throw error;
       const body = prepareBody(contents);
+
+      downloadImages(body, program.output);
+
       output(turndownService.turndown(body));
     });
   } else {
@@ -109,7 +112,7 @@ function options() {
   }
   delete opts.version;
   delete opts.input;
-  delete opts.output;
+  // delete opts.output;
   opts.headingStyle = 'atx';
   opts.codeBlockStyle = 'fenced';
   return opts;
