@@ -3,6 +3,12 @@
 # convert all PBS HTML files to Markdown
 # so we can get the entire set of shownotes together on GitHub
 #
+# This script assumes:
+# - the webpages are downloaded with Safari (defines the naming convention)
+# - the webpages are saved as 'Page Source'
+#
+# The latter preserves the external links
+#
 # This script generates:
 # - a Markdown file for each HTML file in $SOURCEDIR
 # - a TAP result file so it is obvious which files are converted and whether this was successfull
@@ -13,6 +19,7 @@ OUTPUTDIR=../convert2
 TAPFILE='pbsconvert.tap'
 INDEXFILE='pbsconvert.index'
 counter=0
+
 
 # -------------------
 # tapResult
@@ -32,6 +39,7 @@ function tapResult () {
     fi
 }
 
+
 # -------------------
 # processAndTest
 #
@@ -49,6 +57,7 @@ function processAndTest() {
     tapResult $RESULT $counter "${OUTFILE}" >> "${TAPFILE}"
 }
 
+
 # -------------------
 # generateIndex
 #
@@ -64,6 +73,25 @@ function generateIndex() {
 }
 
 
+# -------------------
+# Download the zip files
+# -------------------
+function downloadZips() {
+    mkdir  -p ${SOURCEDIR}/zip
+    cd ${SOURCEDIR}/zip
+    for f in $(grep 'pbs.*\.zip' ../*.html | cut -d'=' -f2 | cut -d'"' -f 2 | grep 'wp-content')
+    do
+        curl $f -O
+    done
+
+    cd -
+}
+
+# ===================
+# Main program starts here
+
+# downloadZips
+
 # start the tapfile with the plan
 tapplan=$(ls -l ${SOURCEDIR}/*.html | wc -l)
 echo 0..${tapplan} > ${TAPFILE}
@@ -77,5 +105,6 @@ do
     PBSNO=$(echo $f | cut -d' ' -f 2)
     PBSMD=pbs${PBSNO}.md
     processAndTest "${f}" ${PBSMD}
+
     generateIndex  "${f}" ${PBSMD}
 done
